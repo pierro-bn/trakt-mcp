@@ -12,13 +12,14 @@ from config.api import effective_limit
 from config.auth import AUTH_VERIFICATION_URL
 from config.mcp.descriptions import USER_LIMIT_DESCRIPTION
 from models.formatters.user import UserFormatters
+from server.user.compact import Detail, compact_items
 from server.base import ToolErrors
 from utils.api.error_types import AuthenticationRequiredError
 
 # Type aliases for user tools
 type Fetcher[T] = Callable[[], Awaitable[list[T] | str]]
 type Formatter[T] = Callable[[list[T]], str]
-type ToolHandler = Callable[[int | None], Awaitable[str]]
+type ToolHandler = Callable[..., Awaitable[str]]
 
 
 def _validate_and_normalize_limit(value: int | None, *, operation: str) -> int:
@@ -61,6 +62,8 @@ async def _fetch_user_items[T](
     client: UserClient,
     fetcher: Fetcher[T],
     formatter: Formatter[T],
+    detail: Detail = "detailed",
+    kind: str = "movie",
 ) -> str:
     """Common helper for fetching and formatting user data with auth checks.
 
@@ -95,6 +98,8 @@ async def _fetch_user_items[T](
         )
     # Apply limit or safety cap when limit=0 (fetch all)
     _, max_items = effective_limit(limit)
+    if detail == "compact":
+        return compact_items(items[:max_items], kind, total=len(items))
     return formatter(items[:max_items])
 
 
@@ -109,7 +114,9 @@ class UserLimitParam(BaseModel):
     )
 
 
-async def fetch_user_watched_shows(limit: int | None = 0) -> str:
+async def fetch_user_watched_shows(
+    limit: int | None = 0, detail: Detail = "detailed"
+) -> str:
     """Fetch shows watched by the authenticated user from Trakt.
 
     Args:
@@ -126,10 +133,14 @@ async def fetch_user_watched_shows(limit: int | None = 0) -> str:
         client=client,
         fetcher=client.get_user_watched_shows,
         formatter=UserFormatters.format_user_watched_shows,
+        detail=detail,
+        kind="show",
     )
 
 
-async def fetch_user_watched_movies(limit: int | None = 0) -> str:
+async def fetch_user_watched_movies(
+    limit: int | None = 0, detail: Detail = "detailed"
+) -> str:
     """Fetch movies watched by the authenticated user from Trakt.
 
     Args:
@@ -146,6 +157,8 @@ async def fetch_user_watched_movies(limit: int | None = 0) -> str:
         client=client,
         fetcher=client.get_user_watched_movies,
         formatter=UserFormatters.format_user_watched_movies,
+        detail=detail,
+        kind="movie",
     )
 
 
@@ -178,9 +191,10 @@ def register_user_tools(mcp: FastMCP) -> tuple[ToolHandler, ToolHandler]:
             int | None,
             Field(description=USER_LIMIT_DESCRIPTION),
         ] = 0,
+        detail: Detail = "compact",
     ) -> str:
         """MCP tool: fetch TV shows watched by the authenticated user."""
-        return await fetch_user_watched_shows(limit)
+        return await fetch_user_watched_shows(limit, detail)
 
     @mcp.tool(
         name="fetch_user_watched_movies",
@@ -204,9 +218,10 @@ def register_user_tools(mcp: FastMCP) -> tuple[ToolHandler, ToolHandler]:
             int | None,
             Field(description=USER_LIMIT_DESCRIPTION),
         ] = 0,
+        detail: Detail = "compact",
     ) -> str:
         """MCP tool: fetch movies watched by the authenticated user."""
-        return await fetch_user_watched_movies(limit)
+        return await fetch_user_watched_movies(limit, detail)
 
     # Return handlers for type checker visibility
     return (fetch_user_watched_shows_tool, fetch_user_watched_movies_tool)

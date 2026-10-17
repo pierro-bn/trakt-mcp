@@ -66,7 +66,6 @@ class SearchFormatters:
                 message += f"  {overview}\n"
 
             # Add a note about using this ID for check-ins
-            message += f"  *Use this ID for check-ins: `{trakt_id}`*\n\n"
 
         # Add a tip for using the search results
         message += (
@@ -128,7 +127,6 @@ class SearchFormatters:
                     overview = overview[: MAX_OVERVIEW_LENGTH - 3] + "..."
                 message += f"  {overview}\n"
 
-            message += f"  *Use this ID for comments: `{trakt_id}`*\n\n"
 
         message += (
             "\nTo view comments for a movie, use the `fetch_movie_comments` "

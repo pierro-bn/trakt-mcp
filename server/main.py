@@ -26,6 +26,7 @@ from .search import register_search_tools
 from .seasons import register_season_tools
 from .shows import register_show_resources, register_show_tools
 from .sync import register_sync_tools
+from .user.compact import register_membership_tool
 from .user import register_user_resources, register_user_tools
 
 # Set up logging
@@ -44,6 +45,7 @@ REGISTRATIONS: Final[tuple[Callable[[FastMCP], object], ...]] = (
     register_comment_tools,
     register_user_resources,
     register_user_tools,
+    register_membership_tool,
     register_search_tools,
     register_checkin_tools,
     register_sync_tools,

@@ -15,11 +15,12 @@ from config.mcp.descriptions import (
     SEARCH_QUERY_DESCRIPTION,
 )
 from models.formatters.search import SearchFormatters
+from server.user.compact import Detail, compact_items
 from server.base import LimitPageValidatorMixin, ToolErrors
 from utils.api.errors import MCPError, handle_api_errors_func
 
 # Type alias for search tool handlers
-ToolHandler = Callable[[str, int, int | None], Awaitable[str]]
+ToolHandler = Callable[..., Awaitable[str]]
 
 
 class QueryParam(LimitPageValidatorMixin):
@@ -123,7 +124,10 @@ async def _run_search(
 
 @handle_api_errors_func
 async def search_shows(
-    query: str, limit: int = DEFAULT_LIMIT, page: int | None = None
+    query: str,
+    limit: int = DEFAULT_LIMIT,
+    page: int | None = None,
+    detail: Detail = "detailed",
 ) -> str:
     """Search for shows on Trakt by title.
 
@@ -144,7 +148,9 @@ async def search_shows(
     return await _run_search(
         op="search shows",
         fetch=client.search_shows,
-        fmt=SearchFormatters.format_show_search_results,
+        fmt=(lambda items: compact_items(items, "show"))
+        if detail == "compact"
+        else SearchFormatters.format_show_search_results,
         query=query,
         limit=limit,
         page=page,
@@ -153,7 +159,10 @@ async def search_shows(
 
 @handle_api_errors_func
 async def search_movies(
-    query: str, limit: int = DEFAULT_LIMIT, page: int | None = None
+    query: str,
+    limit: int = DEFAULT_LIMIT,
+    page: int | None = None,
+    detail: Detail = "detailed",
 ) -> str:
     """Search for movies on Trakt by title.
 
@@ -174,7 +183,9 @@ async def search_movies(
     return await _run_search(
         op="search movies",
         fetch=client.search_movies,
-        fmt=SearchFormatters.format_movie_search_results,
+        fmt=(lambda items: compact_items(items, "movie"))
+        if detail == "compact"
+        else SearchFormatters.format_movie_search_results,
         query=query,
         limit=limit,
         page=page,
@@ -203,8 +214,9 @@ def register_search_tools(
             int, Field(ge=0, le=100, description=SEARCH_LIMIT_DESCRIPTION)
         ] = DEFAULT_LIMIT,
         page: Annotated[int | None, Field(ge=1, description=PAGE_DESCRIPTION)] = None,
+        detail: Detail = "compact",
     ) -> str:
-        return await search_shows(query, limit, page)
+        return await search_shows(query, limit, page, detail)
 
     @mcp.tool(
         name="search_movies",
@@ -219,8 +231,9 @@ def register_search_tools(
             int, Field(ge=0, le=100, description=SEARCH_LIMIT_DESCRIPTION)
         ] = DEFAULT_LIMIT,
         page: Annotated[int | None, Field(ge=1, description=PAGE_DESCRIPTION)] = None,
+        detail: Detail = "compact",
     ) -> str:
-        return await search_movies(query, limit, page)
+        return await search_movies(query, limit, page, detail)
 
     # Return handlers for type checker visibility
     return (search_shows_tool, search_movies_tool)

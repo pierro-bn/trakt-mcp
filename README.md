@@ -38,6 +38,16 @@ Depuis l'assistant connecté, appelez `start_device_auth`, ouvrez le lien fourni
 
 Exemple : « Consulte mes films vus et propose cinq films que je n'ai pas encore regardés. »
 
+## Réponses compactes et économie de tokens
+
+Les outils `search_movies`, `search_shows`, `fetch_user_watched_movies` et `fetch_user_watched_shows` acceptent `detail: "compact"` (par défaut) ou `detail: "detailed"`. Le mode compact renvoie du JSON avec les IDs Trakt, titres, années et les métadonnées de pagination ou de couverture disponibles. Les synopsis restent accessibles en mode détaillé. Les conseils répétés sous chaque résultat de recherche ont été supprimés. Les ressources MCP et les autres outils conservent leur format existant.
+
+`check_watched` prend `media_type` (`movies` ou `shows`) et `ids` (1 à 100 IDs Trakt). Il compare les candidats aux données de l'endpoint watched, sans appliquer la limite d'affichage des listes. Les états sont `watched`, `not_watched` et `unknown`, accompagnés de `complete` et `reason`. Une erreur, une authentification absente ou des identifiants manquants ne sont pas traités comme une absence. Pour une série, `watched` signifie au moins un épisode vu, pas nécessairement la série terminée.
+
+Exemple : `{"media_type":"movies","ids":[1,2]}`. Les outils d'écriture restent inchangés.
+
+Les gains dépendent de la taille des résultats et du client MCP ; ce mode ne garantit pas un pourcentage de réduction des tokens.
+
 ## Développement
 
 Les tests demandent aussi **Node.js 22 ou plus récent** pour le MCP Inspector :
